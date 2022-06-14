@@ -81,10 +81,10 @@ app.use(errorRoutes);
 
 
 database
-    // .sync()
-	.sync({force: true}) 
+    .sync()
+	// .sync({force: true}) 
 	.then((result) => {
-        Product.bulkCreate(products);
+        // Product.bulkCreate(products);
 		app.listen(port, () => {
 			console.log(`Web Server is running on port ${port}`);
 		});

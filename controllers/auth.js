@@ -5,6 +5,7 @@ const User = require('../models/user');
 
 ////////////////////////////////////////////////////////////////
 
+
 const getLogin = (req, res) => {
     const errorMessage = req.flash('errorMessage')[0];
     res.status(200)
@@ -96,6 +97,30 @@ const postLogout = (req, res) => {
     });
 }
 
+const getUser = (req,res) =>{
+    User.findOne({
+        where:{
+            id:req.session.user.id
+        }
+    }
+    )
+    .then((User) => {
+        res.status(200)
+        return res.json({message: '連接成功',data: User})
+        //用json是因為json檔案小，又有key and value，方便
+    })
+    .catch((err) => {
+        console.log('User.findAll() error: ', err);
+    })
+}
+
+const loginStatus = (req,res) =>{
+    if(res.locals.isLogin){
+        return res.send({loginStatus:1})
+    }else{
+        return res.send({loginStatus:0})
+    }
+}
 
 
 module.exports = {
@@ -103,5 +128,7 @@ module.exports = {
     getSignup,
     postLogin,
     postLogout,
-    postSignup
+    postSignup,
+    getUser,
+    loginStatus
 };
