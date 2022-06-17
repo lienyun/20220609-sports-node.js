@@ -47,17 +47,21 @@ const getCart = (req, res) => {
 const postCartAddItem = (req, res) => {
     console.log('postCartAddItem',req.user);
     const { productId } = req.body;
+    // {productId: 12}
     //{}解構
-    let userCart;
+    let userCart; //在外層宣告，之後.then()內都可以使用
     let newQuantity = 1;
     req.user
-    //針對使用者
+    //(app.js)先從 session 拿 user.id，然後從 User 資料表裡面抓這個 user.id 的資料，最後用 req.user = user 綁起來
         .getCart()
+        //取得DB中cart的物件
         .then((cart) => {
             console.log('cart',cart)
-            userCart = cart;
+            userCart = cart; //取得cart資料，賦值給外層取用
+
             // NOTE: 檢查 product 是否已在 cart
             return cart.getProducts({ where: { id: productId } });
+            //get到那個被加進購物車的products {productId:12}
         })
         .then((products) => {
             let product;
@@ -85,9 +89,9 @@ const postCartAddItem = (req, res) => {
             userCart.amount = amount;
             return userCart.save();
         })
-        .then(() => {
-            res.redirect('/cart');
-        })
+        // .then(() => {
+        //     res.redirect('/cart');
+        // })
         .catch((err) => {
             console.log('postCartAddItem error: ', err);
         })
@@ -97,7 +101,7 @@ const postCartDeleteItem = (req, res, next) => {
     let userCart;
     req.user
         .getCart()
-        //取得DB的物件
+        //取得DB中cart的物件，丟到下面.then()中做參數
         .then((cart) => {
             userCart = cart;
             return cart.getProducts({ where: { id: productId } });
@@ -110,9 +114,13 @@ const postCartDeleteItem = (req, res, next) => {
             return userCart
                 .getProducts()
                 .then((products) => {
-                    if (products.length) {
+                    if (products.length>0) {
                         const productSums = products.map((product) => product.price * product.cartItem.quantity);
                         const amount = productSums.reduce((accumulator, currentValue) => accumulator + currentValue);
+                        userCart.amount = amount;
+                        return userCart.save();
+                     }else{
+                        const amount = 0;
                         userCart.amount = amount;
                         return userCart.save();
                     }
@@ -124,11 +132,50 @@ const postCartDeleteItem = (req, res, next) => {
         .catch((err) => console.log(err));
 };
 
+const plusOne = (req, res) => {
+    let newQuantity = 1;
+    const { productId } = req.body;
+    let userCart;
+    req.user
+    .getCart()
+    .then((cart) => {
+        userCart = cart;
+        return cart.getProducts({ where: { id: productId } });
+
+    })
+    .then((products) => {
+        let product;
+        if (products.length > 0) {
+            // NOTE: 本來購物車就有的商品，所以數量必定大於 1
+            product = products[0];
+            const oldQuantity = product.cartItem.quantity;
+            newQuantity = oldQuantity + 1;
+            return product.cartItem.update();
+        }
+        return Product.findByPk(productId);
+    })
+    .then((product) => {
+        return userCart.addProduct(product, {
+            through: { quantity: newQuantity }
+        });
+    })
+    .then(() => {
+        res.redirect('/cart');
+    })
+    .catch((err) => console.log(err));
+
+    
+
+    
+    
+}
+
 
 
 module.exports = {
     getCart,
     getIndex,
     postCartAddItem,
-    postCartDeleteItem
+    postCartDeleteItem,
+    plusOne
 }
